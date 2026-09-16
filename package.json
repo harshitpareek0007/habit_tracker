@@ -1,0 +1,33 @@
+{
+  "name": "ananyas-75-day-challenge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Habit tracking backend for Ananya's 75-Day Challenge",
+  "main": "server/src/server.js",
+  "scripts": {
+    "start": "node server/src/server.js",
+    "dev": "node --watch server/src/server.js",
+    "server:start": "node server/src/server.js",
+    "server:dev": "node --watch server/src/server.js",
+    "test": "node --test",
+    "client:dev": "vite --host 0.0.0.0",
+    "client:build": "vite build",
+    "client:preview": "vite preview"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "lucide-react": "^1.46.0",
+    "mongoose": "^8.9.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.1.0",
+    "vite": "^8.3.0"
+  }
+}
