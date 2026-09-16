@@ -6,9 +6,12 @@ function invalidInput(message) {
   return error;
 }
 
-function validateFrequency(frequency) {
-  if (!['daily', 'weekdays'].includes(frequency)) {
-    throw invalidInput('frequency must be daily or weekdays');
+function validateFrequency(frequency, weekdays = []) {
+  if (!['daily', 'monSat', 'weekdays', 'specificDays'].includes(frequency)) {
+    throw invalidInput('frequency must be daily, monSat, weekdays, or specificDays');
+  }
+  if (frequency === 'specificDays' && (!Array.isArray(weekdays) || weekdays.length === 0)) {
+    throw invalidInput('specificDays requires at least one weekday');
   }
 }
 
@@ -25,19 +28,19 @@ function completionDates(completions) {
   return completed;
 }
 
-function calculateCurrentStreak({ frequency, completions = [], asOfDate }) {
-  validateFrequency(frequency);
+function calculateCurrentStreak({ frequency, weekdays = [], completions = [], asOfDate }) {
+  validateFrequency(frequency, weekdays);
   assertDateKey(asOfDate);
   const completedDates = completionDates(completions);
   let dateKey = asOfDate;
 
-  while (!isScheduledDate(frequency, dateKey)) {
+  while (!isScheduledDate(frequency, dateKey, weekdays)) {
     dateKey = shiftDateKey(dateKey, -1);
   }
 
   let streak = 0;
   while (dateKey >= '0000-01-01') {
-    if (isScheduledDate(frequency, dateKey)) {
+    if (isScheduledDate(frequency, dateKey, weekdays)) {
       if (!completedDates.has(dateKey)) break;
       streak += 1;
     }
@@ -46,8 +49,8 @@ function calculateCurrentStreak({ frequency, completions = [], asOfDate }) {
   return streak;
 }
 
-function calculateBestStreak({ frequency, completions = [], asOfDate }) {
-  validateFrequency(frequency);
+function calculateBestStreak({ frequency, weekdays = [], completions = [], asOfDate }) {
+  validateFrequency(frequency, weekdays);
   assertDateKey(asOfDate);
   const completedDates = completionDates(completions);
   const historicalDates = [...completedDates].filter((dateKey) => dateKey <= asOfDate);
@@ -58,7 +61,7 @@ function calculateBestStreak({ frequency, completions = [], asOfDate }) {
   let bestRun = 0;
 
   while (dateKey <= asOfDate) {
-    if (isScheduledDate(frequency, dateKey)) {
+    if (isScheduledDate(frequency, dateKey, weekdays)) {
       if (completedDates.has(dateKey)) {
         currentRun += 1;
         bestRun = Math.max(bestRun, currentRun);
@@ -71,10 +74,10 @@ function calculateBestStreak({ frequency, completions = [], asOfDate }) {
   return bestRun;
 }
 
-function calculateStreaks({ frequency, completions = [], asOfDate }) {
+function calculateStreaks({ frequency, weekdays = [], completions = [], asOfDate }) {
   return {
-    currentStreak: calculateCurrentStreak({ frequency, completions, asOfDate }),
-    bestStreak: calculateBestStreak({ frequency, completions, asOfDate })
+    currentStreak: calculateCurrentStreak({ frequency, weekdays, completions, asOfDate }),
+    bestStreak: calculateBestStreak({ frequency, weekdays, completions, asOfDate })
   };
 }
 

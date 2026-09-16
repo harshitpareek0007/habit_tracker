@@ -17,8 +17,16 @@ const habitSchema = new mongoose.Schema(
     },
     frequency: {
       type: String,
-      enum: ['daily', 'weekdays'],
+      enum: ['daily', 'monSat', 'weekdays', 'specificDays'],
       required: true
+    },
+    weekdays: {
+      type: [Number],
+      default: [],
+      validate: {
+        validator: (days) => days.every((day) => Number.isInteger(day) && day >= 0 && day <= 6),
+        message: 'weekdays must contain numbers from 0 (Sunday) through 6 (Saturday)'
+      }
     },
     timezone: {
       type: String,

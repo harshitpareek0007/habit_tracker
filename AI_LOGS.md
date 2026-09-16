@@ -158,6 +158,7 @@ unit and API tests.
 
 - `server/src/services/streakService.js`
 - `server/test/streakService.test.js`
+- `server/test/schedule.test.js`
 
 #### Files Modified
 
@@ -180,6 +181,10 @@ unit and API tests.
 #### Commands / Tests
 
 - `node --test server/test/streakService.test.js`
+- `node --test server/test/schedule.test.js server/test/streakService.test.js`
+- Live `curl` verification of a `specificDays` habit on Monday versus Tuesday,
+  followed by archiving temporary verification records.
+- `timeout 20s npm test; status=$?; printf 'full_test_exit=%s\\n' "$status"; pkill -f '[n]ode --test' || true; pkill -f '[n]pm test' || true`.
 - Bounded `npm test` execution.
 - Backend syntax checks and `git diff --check`.
 
@@ -281,7 +286,7 @@ chronological order.
 
 #### Files Created
 
-- None.
+- `server/test/schedule.test.js`
 
 #### Files Modified
 
@@ -520,3 +525,328 @@ matches the current package scripts and backend/frontend ports.
 
 Full application use still requires the interviewer to provide a reachable
 MongoDB connection string in the ignored `.env` file.
+
+### Entry 8 - Current Date, Specific Frequencies & Profile Name
+
+#### User Prompt
+
+The user requested fixes for dynamic local date behavior, Every day and
+Specific days frequency selection, today's scheduling, streak and reminder
+consistency, completion refresh behavior, tests, documentation, and a simple
+persistent editable profile name without adding authentication or changing the
+75-day challenge.
+
+#### AI Action
+
+Inspected the existing Habit model, date utility, habit/completion/streak
+services, dashboard, and reminder. Extended the existing Habit frequency model
+with `specificDays` and a `weekdays` array, threaded it through today,
+completion, and streak paths, added weekday controls and edit mode to the
+existing Habit Library, made the dashboard detect local date rollover, and
+added local-storage profile-name editing.
+
+#### Files Created
+
+- None.
+
+#### Files Modified
+
+- `server/src/models/Habit.js`
+- `server/src/controllers/habitController.js`
+- `server/src/utils/date.js`
+- `server/src/services/habitService.js`
+- `server/src/services/completionService.js`
+- `server/src/services/streakService.js`
+- `server/test/streakService.test.js`
+- `client/src/api.js`
+- `client/src/App.jsx`
+- `client/src/styles.css`
+- `README.md`
+- `REASONING.md`
+- `AI_LOGS.md`
+
+#### Technical Decisions
+
+- Preserve legacy `weekdays` frequency behavior for existing data.
+- Represent custom schedules with `frequency: "specificDays"` and numeric
+  `weekdays` in the existing Habit document.
+- Keep `isScheduledDate` as the single scheduling source of truth.
+- Use a local date key and periodic rollover check for dashboard data.
+- Persist the profile name locally because no profile/account model exists.
+
+#### Commands / Tests
+
+- `node --test server/test/streakService.test.js`
+- `node --test server/test/schedule.test.js server/test/streakService.test.js`
+- `npm run client:build`
+- Backend `node --check` commands for changed server files.
+- `git diff --check`.
+
+#### Verification
+
+- All 14 focused streak/schedule tests passed.
+- The combined schedule and streak run passed all 17 tests.
+- The live API included a Monday/Wednesday/Friday habit on Monday and excluded
+  it on Tuesday; temporary verification records were archived afterward.
+- The complete test command passed all 28 tests with exit code 0.
+- Frontend production build passed.
+- Changed backend files passed syntax checks.
+- Profile name and reminder state remain frontend-local concerns and do not
+  alter backend habit, completion, streak, schedule, or 75-day data.
+
+#### Issues / Fixes
+
+- The former form only offered daily and Monday-Friday frequencies; it now
+  supports Every day and selectable individual weekdays.
+- The former dashboard date was computed only during render; it now detects a
+  local date-key change and reloads today-bound data.
+- Added edit support using the existing PATCH API rather than another route.
+- The first live API assertion command had unsafe shell quoting and failed with
+  `TypeError: Assignment to constant variable`; the assertion was rerun with a
+  heredoc and passed.
+
+#### Result
+
+Current-date behavior, custom scheduling, streak scheduling, reminder inputs,
+completion refresh, habit editing, and local profile-name persistence are
+implemented without changing the 75-day challenge duration.
+
+#### Remaining Issues
+
+The full MongoDB-backed API suite still depends on the configured database;
+deterministic schedule/streak tests and the frontend build passed in this step.
+
+### Entry 10 - Profile Duration and Historical Activity
+
+#### User Prompt
+
+The user requested a dark-themed Profile page, persistent editable challenge
+duration with a 75-day default, a History navigation/page using existing
+Completion records, archived-history visibility, date navigation, schedule-aware
+misses, and synchronized documentation/tests without duplicate systems.
+
+#### AI Action
+
+Inspected the existing Profile route, App state, backend routes/services, date
+utility, models, and tests. Added challenge-duration local persistence and
+Profile controls, added History navigation and view, created the backend
+history endpoint using existing Habit/Completion/scheduling logic, applied dark
+Profile styling, and added API coverage for archived and future history.
+
+#### Files Created
+
+- `server/src/routes/historyRoutes.js`
+
+#### Files Modified
+
+- `server/src/services/habitService.js`
+- `server/src/controllers/habitController.js`
+- `server/src/app.js`
+- `server/test/api.test.js`
+- `client/src/api.js`
+- `client/src/App.jsx`
+- `client/src/styles.css`
+- `README.md`
+- `REASONING.md`
+- `AI_LOGS.md`
+
+#### Technical Decisions
+
+- Keep profile name and challenge duration in the existing local-storage
+  persistence approach because there is no user/account model.
+- Keep 75 days as the default and make duration changes presentation/configuration
+  only; no habit, completion, archive, or streak records are changed.
+- Implement history as one backend read endpoint over existing collections.
+- Query all habits for history so archived habits remain visible, but apply the
+  shared scheduling utility so non-scheduled days are not misses.
+- Return explicit future history state instead of fabricated rows.
+- Use the existing dark theme tokens for Profile forms.
+
+#### Commands / Tests
+
+- `npm run client:build`
+- `node --check server/src/services/habitService.js`
+- `node --check server/src/controllers/habitController.js`
+- `node --check server/src/routes/historyRoutes.js`
+- `node --check server/src/app.js`
+- `node --test server/test/schedule.test.js server/test/streakService.test.js`
+- `npm test`
+- `git diff --check`
+
+#### Verification
+
+- Complete backend suite passed all 29 tests.
+- History API test verified archived completed history remains visible and an
+  unscheduled habit is excluded.
+- Future history returns an explicit future state.
+- Frontend production build passed.
+- Editor diagnostics reported no errors in changed files.
+
+#### Issues / Fixes
+
+- The existing app had no history endpoint; added one route using existing
+  models and the shared schedule utility rather than a second completion system.
+- The prior test count/documentation was updated from 28 to 29.
+- Added a safe 75-day fallback when the local challenge-duration value is
+  malformed.
+
+#### Result
+
+Profile duration persistence, dark Profile presentation, History navigation,
+archived historical records, schedule-aware misses, and future-date handling are
+implemented without changing the 75-day default or existing streak logic.
+
+#### Remaining Issues
+
+No browser automation suite is configured. Frontend behavior was validated by
+production build and backend behavior by the complete test suite.
+
+### Entry 11 - Dark Calendar History and Real-Data States
+
+#### User Prompt
+
+The user requested improving the existing History page with real database data
+only, a full dark theme, calendar month/date selection, archived-history rules,
+future-date handling, schedule-aware misses, stable loading/error/empty states,
+responsive accessibility, and preservation of Today, the reminder, and streaks.
+
+#### AI Action
+
+Inspected the existing History page, `/api/history` service, date utility,
+models, tests, and current styles. Hardened the backend history query for
+archived dates, added scheduled/completed counts, built a dark responsive
+calendar/details layout with previous/next month and date selection, added
+real-data-only empty/future/error states, stable loading skeletons, and reduced
+motion styling. Added an archived-after-completion regression test.
+
+#### Files Created
+
+- None.
+
+#### Files Modified
+
+- `server/src/services/habitService.js`
+- `server/test/api.test.js`
+- `client/src/App.jsx`
+- `client/src/styles.css`
+- `README.md`
+- `REASONING.md`
+- `AI_LOGS.md`
+
+#### Technical Decisions
+
+- Reuse the existing `/api/history?date=` endpoint and Completion collection.
+- Keep `isScheduledDate` as the only scheduling source of truth.
+- Include archived habits only through their archive date; keep old completions
+  visible while avoiding later artificial misses.
+- Keep month navigation client-side and fetch only the selected date.
+- Avoid activity dots because one-date history data cannot safely provide
+  month-wide indicators without creating additional API work/data assumptions.
+- Use dark existing palette tokens and a lightweight skeleton rather than a new
+  theme or animation library.
+
+#### Commands / Tests
+
+- `npm test`
+- `npm run client:build`
+- `node --check` for changed backend files.
+- `git diff --check`.
+
+#### Verification
+
+- Backend suite passed all 30 tests, including the archived-history regression.
+- Frontend production build passed.
+- Editor diagnostics reported no errors in changed files.
+
+#### Issues / Fixes
+
+- History previously had no calendar and used light cards; added the dark
+  calendar/details layout.
+- Archived habits could have been treated as later scheduled misses; backend
+  history now excludes dates after archive while preserving earlier records.
+- Retry now refetches the selected date without changing calendar state.
+
+#### Result
+
+History now renders only backend-derived records, supports calendar and day
+navigation, distinguishes empty states, preserves archived history, and remains
+schedule-aware without changing Today, reminders, or streak logic.
+
+#### Remaining Issues
+
+No browser automation suite is configured. Build, diagnostics, and backend
+integration tests are available; the final test count is 30.
+
+### Entry 9 - Profile Navigation, Dynamic Greeting & Mon-Sat
+
+#### User Prompt
+
+The user requested replacing the always-visible sidebar profile input with a
+proper Profile option/page and Save action, adding a dynamic local-time
+greeting, preserving current-date/reminder behavior, and adding Every day,
+Mon-Sat, and Specific days frequency behavior without duplicate systems.
+
+#### AI Action
+
+Inspected the current App shell, profile storage, date clock, Habit model,
+shared scheduling utility, streak service, styles, and tests. Added a Profile
+route/page, moved name editing into an explicit save form, added local time
+greeting periods and periodic clock refresh, added `monSat` to the existing
+frequency model and schedule utility, and added Mon-Sat controls and tests.
+
+#### Files Created
+
+- None.
+
+#### Files Modified
+
+- `client/src/App.jsx`
+- `client/src/styles.css`
+- `server/src/models/Habit.js`
+- `server/src/utils/date.js`
+- `server/src/services/streakService.js`
+- `server/test/schedule.test.js`
+- `server/test/streakService.test.js`
+- `README.md`
+- `REASONING.md`
+- `AI_LOGS.md`
+
+#### Technical Decisions
+
+- Keep browser local storage as the single profile persistence mechanism because
+  no user/account model exists.
+- Keep scheduling and streak calculation backend-authoritative.
+- Persist `monSat` as its own frequency rather than disguising it as custom
+  selected days.
+- Use one periodically refreshed local clock for greeting transitions.
+
+#### Commands / Tests
+
+- `node --test server/test/schedule.test.js server/test/streakService.test.js`
+- `npm run client:build`
+- Backend `node --check` commands and `git diff --check`.
+
+#### Verification
+
+- The first focused run found one stale invalid-frequency assertion; the test
+  expected the pre-Mon-Sat error text.
+- After updating that expectation, all 19 schedule/streak tests passed.
+- Frontend production build and changed-file diagnostics passed.
+
+#### Issues / Fixes
+
+- Removed the always-visible sidebar profile input and replaced it with Profile
+  navigation and a saved profile page.
+- Added the Mon-Sat schedule and corrected the test expectation for its error
+  message.
+
+#### Result
+
+Profile editing, dynamic local-time greeting, Mon-Sat scheduling, Specific days,
+current-date refresh, reminder inputs, and existing streak behavior are
+integrated without changing the 75-day challenge.
+
+#### Remaining Issues
+
+No frontend browser automation test exists; frontend production build and
+backend deterministic/API test coverage were run.

@@ -4,6 +4,99 @@ Part 4 status: **Implemented** describes the backend and React dashboard now in
 the repository; **Planned** marks future work. This is an auditable engineering
 explanation, not private chain-of-thought.
 
+## Current Date, Frequency, and Profile Extension
+
+**Implemented:** The frontend derives a `YYYY-MM-DD` key from the browser's
+local date and checks it every 30 seconds. When the key changes, the existing
+today loader requests the new `/api/today`, completion, and streak data. Date
+display uses local `Date` values, avoiding UTC midnight shifts.
+
+**Implemented:** The existing `frequency` field accepts `daily`, legacy
+`monSat`, legacy `weekdays`, or `specificDays`. For `specificDays`, the Habit document stores
+`weekdays` as numeric JavaScript weekday values (`0` Sunday through `6`
+Saturday). `isScheduledDate` is the single scheduling algorithm used by today,
+completion validation, streak traversal, and reminder inputs.
+
+`monSat` is a named schedule because it is a common complete range: Monday
+through Saturday, with Sunday excluded. It is not converted into a
+`specificDays` record, so its intent remains explicit in persisted data.
+
+**Implemented:** The Profile navigation route contains the editable display
+name and an explicit Save action. The single App-level profile value is backed
+by browser local storage and passed to the sidebar, greeting, and profile page;
+the sidebar has no always-visible editing input.
+
+**Implemented:** Greeting periods use the current local hour: 05:00-11:59
+morning, 12:00-16:59 afternoon, 17:00-20:59 evening, and 21:00-04:59 night.
+The same local clock is refreshed periodically so the label changes naturally.
+
+**Implemented:** The Habit Library offers Every day or Specific days with
+accessible radio and checkbox controls, supports editing existing habits, and
+uses the existing PATCH endpoint. No duplicate habit or completion system was
+added.
+
+**Implemented:** Deterministic schedule tests cover all seven daily dates,
+Monday-only, Monday/Wednesday/Friday, weekend-only schedules, and the matching
+streak continuation behavior.
+
+**Implemented:** The complete Node test run covers the existing API behavior as
+well as the schedule and streak suites; no frontend copy of the scheduling or
+streak algorithms is used.
+
+## Profile and Challenge Duration
+
+**Implemented:** Profile stores the display name and challenge duration in
+browser local storage through the single App-level state. The default duration
+is 75 days, with Profile options for 30, 45, 60, 75, 90, and 100 days. The
+sidebar brand reads the selected duration, and saving it does not touch Habit,
+Completion, archive, or streak data.
+
+The local persistence is intentional: no user/account model or authentication
+exists, so adding a database profile model would introduce unnecessary identity
+architecture. A future authenticated version can move these settings to a user
+document without changing habit/completion relationships.
+
+## History Architecture
+
+**Implemented:** History is a new read-only view over the existing Habit and
+Completion collections, exposed by `GET /api/history?date=YYYY-MM-DD`. The
+backend queries all habits so archived records remain visible, filters expected
+habits with `isScheduledDate`, and joins completions in one query. The frontend
+does not calculate schedules, misses, or streaks; it renders the backend's
+history rows and supports previous-day navigation while disabling future dates.
+
+This preserves one completion system and ensures a Tuesday is not shown as a
+miss for a Monday/Wednesday/Friday habit. Future dates return an explicit empty
+state rather than fabricated completion data.
+
+**Implemented:** The History UI keeps a calendar month in local component state,
+loads only the selected date, and preserves the calendar while details enter a
+small skeleton state. Month navigation changes the calendar without requesting
+history; selecting a date requests one `/api/history` response. Calendar dates
+are local date keys, not UTC-formatted timestamps. Future buttons are disabled.
+The calendar has keyboard-focusable buttons, visible focus styling, semantic
+labels, responsive stacking, and reduced-motion behavior.
+
+**Implemented:** History uses dark cards and controls consistent with the
+existing sidebar palette. It never creates activity indicators or percentages
+from sample data. The backend distinguishes no scheduled habits from scheduled
+habits with zero completed records and excludes archived habits from dates after
+their archive timestamp.
+
+## Profile Visual Treatment
+
+**Implemented:** Profile forms use the existing dark sidebar palette, dark
+inputs, existing typography, and the existing primary button. No second theme
+or global redesign was introduced.
+
+**Implemented:** With no user model or authentication, the smallest profile
+name persistence is browser local storage. The editable name updates the
+sidebar and greeting, survives refresh, defaults to the existing display name,
+and cannot affect backend records or the 75-day challenge.
+
+**Trade-off:** A local profile name is browser/device-specific until accounts
+are introduced. This avoids adding authentication or a duplicate profile model.
+
 ## Documentation and Run Workflow Decision
 
 **Implemented:** The README now presents one verified Codespaces workflow:
@@ -208,7 +301,8 @@ _id: ObjectId
 name: String, required, trimmed
 description: String, optional
 schedule:
-  type: "daily" | "weekdays"
+  type: "daily" | "weekdays" | "specificDays"
+  weekdays: Number[] for specificDays, 0 Sunday through 6 Saturday
   timezone: IANA timezone string, required
 archivedAt: Date | null, default null
 createdAt: Date

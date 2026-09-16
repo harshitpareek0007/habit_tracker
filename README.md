@@ -40,6 +40,26 @@ MONGODB_SERVER_SELECTION_TIMEOUT_MS=5000
 `MONGODB_SERVER_SELECTION_TIMEOUT_MS` have the values shown above as local
 development defaults.
 
+## Date and Frequency Behavior
+
+The dashboard derives the current date from the browser's local calendar and
+checks for a date rollover every 30 seconds. When the date changes, it reloads
+today's habits, completion status, streaks, and pending reminder data. The
+backend uses the same `YYYY-MM-DD` date-key convention and does not shift the
+user's day through UTC midnight conversion.
+
+Habit frequency options are:
+
+- **Every day:** scheduled Sunday through Saturday.
+- **Mon - Sat:** scheduled Monday through Saturday and not Sunday.
+- **Specific days:** one or more selected weekdays, including weekend-only
+	schedules. These are stored as `frequency: "specificDays"` and a `weekdays`
+	array using Sunday `0` through Saturday `6`.
+
+Existing `frequency: "weekdays"` habits remain supported as Monday-Friday
+habits. The shared backend scheduling utility drives today's habits, completion
+validation, streaks, and reminder inputs.
+
 ## 3. Start Backend
 
 In the first terminal, run the existing backend development script:
@@ -119,7 +139,11 @@ Run the deterministic streak tests directly:
 
 ```bash
 node --test server/test/streakService.test.js
+node --test server/test/schedule.test.js server/test/streakService.test.js
 ```
+
+The complete `npm test` run currently covers 30 tests across API, history, schedule, and
+streak behavior.
 
 Build the frontend:
 
@@ -145,7 +169,8 @@ node --check server/src/server.js
 
 Implemented: habit CRUD, case-insensitive search, soft archive/restore, today's
 applicable habits, completion history, current/best streaks, and a responsive
-React dashboard with habit management.
+React dashboard with habit management. Habits support Every day and selected
+specific weekdays, plus Mon - Sat.
 
 Planned: authentication, additional frequency types, and browser push
 notifications.
@@ -296,6 +321,7 @@ database credentials or stack traces.
 - `POST /api/habits/:habitId/archive`
 - `POST /api/habits/:habitId/restore`
 - `GET /api/today?date=YYYY-MM-DD`
+- `GET /api/history?date=YYYY-MM-DD`
 - `GET /api/habits/:habitId/completions`
 - `GET /api/habits/:habitId/completions/:dateKey`
 - `PUT /api/habits/:habitId/completions/:dateKey`
@@ -309,6 +335,23 @@ Success responses use `{ success: true, data }`; errors use
 `Habit` stores name, description, frequency, timezone, archive timestamp, and
 timestamps. `Completion` stores a habit reference, local `dateKey`, status, and
 timestamps. A unique `{ habitId, dateKey }` index prevents duplicates.
+
+Challenge duration and profile name are currently browser-local settings because
+the application has no user/account model. The default challenge duration is
+75 days; Profile supports 30, 45, 60, 75, 90, and 100 days. Changing it does
+not modify habits, completions, archived records, or streak history.
+
+## History
+
+The History page uses `GET /api/history?date=YYYY-MM-DD`. The backend loads all
+habits, including archived habits, applies the shared scheduling utility, and
+joins persisted Completion records. It shows completed and missed scheduled
+habits, progress counts, percentages, a dark month calendar, previous/next-day
+navigation, and a clear future-date empty state. Non-scheduled habits are not
+counted as missed. If nothing is scheduled it shows `No habits were scheduled
+for this date.`; scheduled days with no completed records show
+`No activity recorded for this date.`. Archived habits remain visible on dates
+at or before their archive date and are not turned into later misses.
 
 ## Streak Logic
 
@@ -324,6 +367,31 @@ dates use local `YYYY-MM-DD` keys.
 The dashboard requests today's habits from the backend, then requests each
 habit's completion and streak data. It displays progress without implementing
 a second schedule or streak algorithm in React.
+
+## Morning Reminder
+
+Before noon in the browser's local time, the dashboard shows active habits
+returned for today that have no completed record for today's date. Completed,
+archived, and non-scheduled habits are excluded. Completing a habit reloads the
+backend state, updating the pending count and reminder immediately; refreshes
+also recalculate it from the persisted completion record. Dismissal is stored
+locally for the current local date.
+
+## Profile and Greeting
+
+Use the **Profile** navigation item to edit the display name and save it. The
+name is persisted in browser local storage because this project has no account
+or authentication model. The dashboard uses the current local clock for a
+dynamic Good morning, Good afternoon, Good evening, or Good night greeting and
+updates it periodically without requiring a refresh. The profile name does not
+affect the 75-day duration or any habit data.
+
+## Profile Name
+
+The sidebar profile-name field stores the display name in browser local storage.
+It updates the greeting and brand immediately and survives refresh. No account
+or authentication system is introduced, and the name does not affect habits,
+completions, streaks, scheduling, reminders, or the 75-day challenge duration.
 
 ## Build / Production
 

@@ -28,12 +28,20 @@ function dateKeyFromDate(date = new Date(), timezone = 'UTC') {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function isScheduledDate(frequency, dateKey) {
+function isScheduledDate(frequency, dateKey, weekdays = []) {
   assertDateKey(dateKey);
   if (frequency === 'daily') return true;
+  if (frequency === 'monSat') {
+    const day = new Date(`${dateKey}T00:00:00.000Z`).getUTCDay();
+    return day >= 1 && day <= 6;
+  }
   if (frequency === 'weekdays') {
     const day = new Date(`${dateKey}T00:00:00.000Z`).getUTCDay();
     return day >= 1 && day <= 5;
+  }
+  if (frequency === 'specificDays') {
+    const day = new Date(`${dateKey}T00:00:00.000Z`).getUTCDay();
+    return weekdays.includes(day);
   }
   return false;
 }

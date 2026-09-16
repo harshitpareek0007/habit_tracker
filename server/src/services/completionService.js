@@ -11,7 +11,7 @@ async function validateCompletionDate(habitId, dateKey) {
     error.statusCode = 409;
     throw error;
   }
-  if (!isScheduledDate(habit.frequency, dateKey)) {
+  if (!isScheduledDate(habit.frequency, dateKey, habit.weekdays)) {
     const error = new Error('Habit is not scheduled for this date');
     error.statusCode = 400;
     throw error;
@@ -55,7 +55,7 @@ async function getStreaks(habitId, asOfDate) {
     frequency: habit.frequency,
     archived: Boolean(habit.archivedAt),
     asOfDate: dateKey,
-    ...calculateStreaks({ frequency: habit.frequency, completions, asOfDate: dateKey })
+    ...calculateStreaks({ frequency: habit.frequency, weekdays: habit.weekdays, completions, asOfDate: dateKey })
   };
 }
 

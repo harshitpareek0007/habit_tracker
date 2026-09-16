@@ -77,6 +77,31 @@ test('archives and restores without deleting history', async () => {
   assert.equal(body(history).length, 1);
 });
 
+test('history returns archived completions and excludes unscheduled habits', async () => {
+  const completedHabit = await Habit.create({ name: 'Archived Read', frequency: 'daily' });
+  const unscheduledHabit = await Habit.create({ name: 'Friday Only', frequency: 'specificDays', weekdays: [5] });
+  await Completion.create({ habitId: completedHabit._id, dateKey: '2026-09-15', completed: true });
+  await completedHabit.updateOne({ archivedAt: new Date() });
+
+  const response = await request(app).get('/api/history?date=2026-09-15').expect(200);
+  const names = body(response).items.map(({ habit }) => habit.name);
+  assert.deepEqual(names, ['Archived Read']);
+  assert.equal(body(response).items[0].completion.completed, true);
+  assert.equal(body(await request(app).get('/api/history?date=2099-01-01').expect(200)).future, true);
+  assert.equal(unscheduledHabit.name, 'Friday Only');
+});
+
+test('archived habit is visible on its completion date but not missed afterward', async () => {
+  const habit = await Habit.create({ name: 'Archived Before Later Date', frequency: 'daily' });
+  await Completion.create({ habitId: habit._id, dateKey: '2026-09-10', completed: true });
+  await habit.updateOne({ archivedAt: new Date('2026-09-10T12:00:00.000Z') });
+
+  const completionDate = await request(app).get('/api/history?date=2026-09-10').expect(200);
+  assert.equal(body(completionDate).items[0].completion.completed, true);
+  const laterDate = await request(app).get('/api/history?date=2026-09-11').expect(200);
+  assert.equal(laterDate.body.data.items.some(({ habit: item }) => item._id.toString() === habit._id.toString()), false);
+});
+
 test('returns daily and weekday habits for the requested date', async () => {
   await Habit.create({ name: 'Daily', frequency: 'daily' });
   await Habit.create({ name: 'Weekday', frequency: 'weekdays' });

@@ -14,6 +14,7 @@ async function request(path, options = {}) {
 
 export const api = {
   getToday: (date) => request(`/api/today?date=${encodeURIComponent(date)}`),
+  getHistory: (date) => request(`/api/history?date=${encodeURIComponent(date)}`),
   getCompletion: (habitId, date) => request(`/api/habits/${habitId}/completions/${date}`),
   setCompletion: (habitId, date, completed) => request(`/api/habits/${habitId}/completions/${date}`, {
     method: 'PUT',
@@ -22,5 +23,6 @@ export const api = {
   getStreaks: (habitId, date) => request(`/api/habits/${habitId}/completions/streaks?date=${encodeURIComponent(date)}`),
   getHabits: (archived = 'false') => request(`/api/habits?archived=${archived}`),
   createHabit: (habit) => request('/api/habits', { method: 'POST', body: JSON.stringify(habit) }),
+  updateHabit: (habitId, habit) => request(`/api/habits/${habitId}`, { method: 'PATCH', body: JSON.stringify(habit) }),
   archiveHabit: (habitId) => request(`/api/habits/${habitId}/archive`, { method: 'POST' })
 };

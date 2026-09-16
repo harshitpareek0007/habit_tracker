@@ -3,6 +3,7 @@ const cors = require('cors');
 const habitRoutes = require('./routes/habitRoutes');
 const todayRoutes = require('./routes/todayRoutes');
 const completionRoutes = require('./routes/completionRoutes');
+const historyRoutes = require('./routes/historyRoutes');
 const { notFoundHandler, errorHandler } = require('./middleware/errors');
 
 function createApp() {
@@ -15,6 +16,7 @@ function createApp() {
   });
   app.use('/api/habits', habitRoutes);
   app.use('/api/today', todayRoutes);
+  app.use('/api/history', historyRoutes);
   app.use('/api/habits/:habitId/completions', completionRoutes);
   app.use(notFoundHandler);
   app.use(errorHandler);
